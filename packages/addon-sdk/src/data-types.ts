@@ -132,6 +132,7 @@ export type DataSource = (typeof DataSource)[keyof typeof DataSource];
 export const AccountType = {
   SECURITIES: 'SECURITIES',
   CASH: 'CASH',
+  CREDIT_CARD: 'CREDIT_CARD',
   CRYPTOCURRENCY: 'CRYPTOCURRENCY',
 } as const;
 
@@ -575,6 +576,10 @@ export interface Holding {
   realizedGainPct?: number | null;
   totalGain?: MonetaryValue | null;
   totalGainPct?: number | null;
+  income?: MonetaryValue | null;
+  totalReturn?: MonetaryValue | null;
+  totalReturnPct?: number | null;
+  returnBasis?: MonetaryValue | null;
   dayChange?: MonetaryValue | null;
   dayChangePct?: number | null;
   prevCloseValue?: MonetaryValue | null;
@@ -653,6 +658,7 @@ export interface Settings {
   theme: string;
   font: string;
   baseCurrency: string;
+  defaultReturnMetric: 'twr' | 'irr' | 'valueReturn';
   timezone?: string;
   instanceId: string;
   onboardingCompleted: boolean;
@@ -752,6 +758,20 @@ export interface AccountValuation {
   totalValue: number;
   costBasis: number;
   netContribution: number;
+  cashBalanceBase: number;
+  investmentMarketValueBase: number;
+  totalValueBase: number;
+  costBasisBase: number;
+  netContributionBase: number;
+  externalInflowBase: number;
+  externalOutflowBase: number;
+  externalFlowSource:
+    | 'UNKNOWN'
+    | 'ACTIVITY_DERIVED'
+    | 'STORED_GROSS'
+    | 'NET_CONTRIBUTION_FALLBACK'
+    | 'MIXED';
+  performanceEligibleValueBase: number;
   calculatedAt: string;
 }
 
@@ -764,10 +784,10 @@ export interface AccountSummaryView {
   totalValueAccountCurrency: number;
   totalValueBaseCurrency: number;
   baseCurrency: string;
-  performance: SimplePerformanceMetrics;
+  performance: SimplePerformanceResult;
 }
 
-export interface SimplePerformanceMetrics {
+export interface SimplePerformanceResult {
   accountId: string;
   totalValue?: number | null;
   accountCurrency?: string | null;
@@ -775,17 +795,18 @@ export interface SimplePerformanceMetrics {
   fxRateToBase?: number | null;
   totalGainLossAmount?: number | null;
   cumulativeReturnPercent?: number | null;
-  dayGainLossAmount?: number | null;
-  dayReturnPercentModDietz?: number | null;
   portfolioWeight?: number | null;
 }
+
+/** @deprecated Use SimplePerformanceResult. */
+export type SimplePerformanceMetrics = SimplePerformanceResult;
 
 export interface AccountGroup {
   groupName: string;
   accounts: AccountSummaryView[];
   totalValueBaseCurrency: number;
   baseCurrency: string;
-  performance: SimplePerformanceMetrics;
+  performance: SimplePerformanceResult;
   accountCount: number;
 }
 
@@ -837,32 +858,74 @@ export interface ReturnData {
   value: number;
 }
 
-export interface PerformanceMetrics {
-  id: string;
-  returns: ReturnData[];
-  periodStartDate?: string | null;
-  periodEndDate?: string | null;
-  currency: string;
-  /** Period gain in dollars (SOTA: change in unrealized P&L for HOLDINGS mode) */
-  periodGain: number;
-  /** Period return percentage (SOTA formula for HOLDINGS mode). Null when start value ≤ 0. */
-  periodReturn: number | null;
-  /** Time-weighted return (null for HOLDINGS mode - requires cash flow tracking) */
-  cumulativeTwr?: number | null;
-  /** Legacy field for backward compatibility */
-  gainLossAmount?: number | null;
-  /** Annualized TWR (null for HOLDINGS mode) */
-  annualizedTwr?: number | null;
-  simpleReturn: number;
-  annualizedSimpleReturn: number;
-  /** Money-weighted return (null for HOLDINGS mode - requires cash flow tracking) */
-  cumulativeMwr?: number | null;
-  /** Annualized MWR (null for HOLDINGS mode) */
-  annualizedMwr?: number | null;
-  volatility: number;
-  maxDrawdown: number;
-  /** Indicates if this is a HOLDINGS mode account (no cash flow tracking) */
+export interface PerformanceResult {
+  scope: PerformanceScopeDescriptor;
+  period: PerformancePeriod;
+  mode: ReturnMethod;
+  returns: PerformanceReturns;
+  attribution: PerformanceAttribution;
+  risk: PerformanceRisk;
+  dataQuality: PerformanceDataQuality;
+  series: ReturnData[];
   isHoldingsMode?: boolean;
+  isMixedTrackingMode?: boolean;
+}
+
+/** @deprecated Use PerformanceResult. */
+export type PerformanceMetrics = PerformanceResult;
+
+export interface PerformanceScopeDescriptor {
+  id: string;
+  currency: string;
+}
+
+export interface PerformancePeriod {
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export type ReturnMethod =
+  | 'timeWeighted'
+  | 'valueReturn'
+  | 'symbolPriceBased'
+  | 'notApplicable';
+
+export interface PerformanceReturns {
+  twr?: number | null;
+  annualizedTwr?: number | null;
+  /** Selected-period money-weighted return derived from annualized XIRR. */
+  irr?: number | null;
+  /** Annualized XIRR using dated cash flows. */
+  annualizedIrr?: number | null;
+  valueReturn?: number | null;
+  annualizedValueReturn?: number | null;
+}
+
+export interface PerformanceAttribution {
+  contributions: number;
+  distributions: number;
+  income: number;
+  realizedPnl: number;
+  unrealizedPnlChange: number;
+  fxEffect: number;
+  fees: number;
+  taxes: number;
+  residual: number;
+}
+
+export interface PerformanceRisk {
+  volatility?: number | null;
+  maxDrawdown?: number | null;
+  peakDate?: string | null;
+  troughDate?: string | null;
+  recoveryDate?: string | null;
+  drawdownDurationDays?: number | null;
+}
+
+export interface PerformanceDataQuality {
+  status: 'ok' | 'partial' | 'noData' | 'notApplicable';
+  warnings?: string[];
+  notApplicableReasons?: string[];
 }
 
 export interface UpdateAssetProfile {

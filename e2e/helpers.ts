@@ -1,6 +1,6 @@
 import { expect, Page } from "@playwright/test";
 
-export const BASE_URL = "http://localhost:1420";
+export const BASE_URL = process.env.WF_E2E_BASE_URL || "http://localhost:1420";
 export const TEST_PASSWORD = "password001";
 
 export function getDatePartsAgo(daysAgo: number): { month: string; day: string; year: string } {
@@ -62,6 +62,16 @@ export async function waitForOverlayClose(page: Page) {
     .locator('[data-state="open"][aria-hidden="true"]')
     .waitFor({ state: "hidden", timeout: 5000 })
     .catch(() => {});
+}
+
+export async function gotoActivities(page: Page) {
+  await page.goto(`${BASE_URL}/activities`, { waitUntil: "domcontentloaded" });
+  // The Spending module is enabled by default, so the Activities page renders the
+  // Investments/Spending SwipablePage (no "Activity" heading). The "Add Activities"
+  // button is present in both layouts, making it a stable load anchor.
+  await expect(page.getByRole("button", { name: "Add Activities" })).toBeVisible({
+    timeout: 10000,
+  });
 }
 
 export async function openAddActivitySheet(page: Page) {

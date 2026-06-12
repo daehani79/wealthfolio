@@ -88,10 +88,10 @@ Thumbs.db
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
-/AI-POC-COPY
+.playwright-report
+.playwright-mcp
 # AI tools
 .codex/
-.ralph-tui/
 .kiro/
 .conductor/
 db/
@@ -99,3 +99,4 @@ apps/db/
 apps/tauri/db/
 tasks
 **/*.local.md
+wealthfolio.db

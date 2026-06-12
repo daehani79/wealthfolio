@@ -75,9 +75,17 @@ const DATA_ACCESS_OPTIONS = [
     description: "Current positions and their values",
   },
   {
-    toolIds: ["search_activities", "record_activity", "record_activities", "import_csv"],
+    toolIds: [
+      "search_activities",
+      "record_activity",
+      "record_activities",
+      "import_csv",
+      "propose_transaction_categories",
+      "list_categorization_context",
+      "create_categorization_rule",
+    ],
     label: "Transactions",
-    description: "View, draft, and import activities",
+    description: "View, draft, import, and categorize activities",
   },
   {
     toolIds: ["get_performance"],
@@ -90,6 +98,15 @@ const DATA_ACCESS_OPTIONS = [
     toolIds: ["get_asset_allocation"],
     label: "Allocation",
     description: "Portfolio allocation breakdown",
+  },
+  {
+    toolIds: [
+      "list_asset_taxonomies",
+      "get_asset_taxonomy_assignments",
+      "prepare_asset_classification",
+    ],
+    label: "Classifications",
+    description: "Asset taxonomies and classification drafts",
   },
   {
     toolIds: ["get_valuation_history"],

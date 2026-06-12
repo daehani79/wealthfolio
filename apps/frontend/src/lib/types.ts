@@ -13,6 +13,10 @@ import {
 } from "./constants";
 
 export {
+  accountCapabilities,
+  accountPurposeAccountTypes,
+  AccountPurpose,
+  accountSupportsPurpose,
   AccountType,
   ActivityStatus,
   ActivityType,
@@ -34,14 +38,40 @@ export {
   HOLDING_GROUP_ORDER,
   HoldingType,
   ImportFormat,
+  isLiabilityAccountType,
+  isReportAccountType,
   PricingMode,
   QuoteMode,
+  REPORT_ACCOUNT_TYPES,
   SUBTYPE_DISPLAY_NAMES,
 } from "./constants";
 
 export type { HoldingCategoryFilterId } from "./constants";
 
 export type { ActivitySubtype, ImportRequiredField } from "./constants";
+
+export interface PortfolioWithAccounts {
+  id: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+  accountIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewPortfolio {
+  name: string;
+  description?: string;
+  sortOrder?: number;
+  accountIds: string[];
+}
+
+export type AccountScope =
+  | { type: "all" }
+  | { type: "account"; accountId: string }
+  | { type: "portfolio"; portfolioId: string }
+  | { type: "accounts"; accountIds: string[] };
 
 export interface Account {
   id: string;
@@ -115,6 +145,15 @@ export interface Activity {
   // Metadata
   notes?: string;
   metadata?: Record<string, unknown>;
+
+  /**
+   * Optional spending event tag — sourced from the `activity_events` join
+   * table and surfaced on `CashActivity` (the spending
+   * search response). Plain `getActivities()` lists don't populate this
+   * field; consumers that need the tag should go through the spending
+   * cash-activity search, which JOINs against `activity_events`.
+   */
+  eventId?: string | null;
 
   // Source identity
   sourceSystem?: string; // SNAPTRADE, PLAID, MANUAL, CSV
@@ -193,6 +232,13 @@ export interface ActivityDetails {
   importRunId?: string;
   isUserModified?: boolean;
   metadata?: Record<string, unknown>;
+  transferOutId?: string;
+  transferInId?: string;
+  counterpartActivityId?: string;
+  counterpartAccountId?: string;
+  counterpartAmount?: string | null;
+  counterpartCurrency?: string | null;
+  counterpartFxRate?: string | null;
   subRows?: ActivityDetails[];
 }
 
@@ -288,6 +334,42 @@ export interface ActivityBulkMutationResult {
   deleted: Activity[];
   createdMappings: ActivityBulkIdentifierMapping[];
   errors: ActivityBulkMutationError[];
+}
+
+export interface InternalTransferPairRequest {
+  transferOutId?: string;
+  transferInId?: string;
+  sourceGroupId?: string;
+  fromAccountId: string;
+  toAccountId: string;
+  activityDate: string | Date;
+  sourceAmount: string | number;
+  destinationAmount: string | number;
+  sourceCurrency: string;
+  destinationCurrency: string;
+  fxRate?: string | number | null;
+  notes?: string | null;
+  transferMode?: "cash";
+}
+
+export interface InternalTransferPairResponse {
+  transferOut: Activity;
+  transferIn: Activity;
+}
+
+export interface TransferMatchCandidateRequest {
+  activityId: string;
+  windowDays?: number;
+  limit?: number;
+}
+
+export interface TransferMatchCandidate {
+  activity: Activity;
+  matchKind: "cash" | "security";
+  confidence: "high" | "medium" | "low";
+  score: number;
+  reasons: string[];
+  warnings: string[];
 }
 export type ActivityImport = z.infer<typeof importActivitySchema>;
 export type ImportMappingData = z.infer<typeof importMappingSchema>;
@@ -553,6 +635,35 @@ export interface Lot {
   acquisitionFees: number;
 }
 
+export type AssetLotSource = "TRANSACTION_LOT" | "SNAPSHOT_POSITION";
+
+export interface AssetLotView {
+  id: string;
+  accountId: string;
+  accountName: string;
+  assetId: string;
+  source: AssetLotSource;
+  quantity: number;
+  originalQuantity: number;
+  remainingQuantity: number;
+  costBasis: number;
+  costBasisBase?: number | null;
+  unitCost: number;
+  fees: number;
+  fxRateToBase?: number | null;
+  splitRatio: number;
+  contractMultiplier: number;
+  acquisitionDate?: string | null;
+  snapshotDate?: string | null;
+  isClosed: boolean;
+  closeDate?: string | null;
+  disposalProceeds?: number | null;
+  disposalCostBasis?: number | null;
+  disposalCostBasisBase?: number | null;
+  realizedPnl?: number | null;
+  realizedPnlBase?: number | null;
+}
+
 export interface Position {
   id: string;
   accountId: string;
@@ -582,6 +693,7 @@ export interface Holding {
   quantity: number;
   openDate?: string | Date | null;
   lots?: Lot[] | null;
+  contractMultiplier?: number | null;
   localCurrency: string;
   baseCurrency: string;
   fxRate?: number | null;
@@ -594,11 +706,17 @@ export interface Holding {
   realizedGainPct?: number | null;
   totalGain?: MonetaryValue | null;
   totalGainPct?: number | null;
+  income?: MonetaryValue | null;
+  totalReturn?: MonetaryValue | null;
+  totalReturnPct?: number | null;
+  returnBasis?: MonetaryValue | null;
   dayChange?: MonetaryValue | null;
   dayChangePct?: number | null;
   prevCloseValue?: MonetaryValue | null;
   weight: number;
   asOfDate: string;
+  /** Source account IDs for aggregated holdings (portfolio/multi-account scope). Empty for single-account. */
+  sourceAccountIds?: string[];
 }
 
 /**
@@ -714,6 +832,7 @@ export interface Settings {
   theme: string;
   font: string;
   baseCurrency: string;
+  defaultReturnMetric: "twr" | "irr" | "valueReturn";
   timezone: string;
   instanceId: string;
   onboardingCompleted: boolean;
@@ -857,6 +976,20 @@ export interface AccountValuation {
   totalValue: number;
   costBasis: number;
   netContribution: number;
+  cashBalanceBase: number;
+  investmentMarketValueBase: number;
+  totalValueBase: number;
+  costBasisBase: number;
+  netContributionBase: number;
+  externalInflowBase: number;
+  externalOutflowBase: number;
+  externalFlowSource:
+    | "UNKNOWN"
+    | "ACTIVITY_DERIVED"
+    | "STORED_GROSS"
+    | "NET_CONTRIBUTION_FALLBACK"
+    | "MIXED";
+  performanceEligibleValueBase: number;
   calculatedAt: string;
 }
 
@@ -869,10 +1002,10 @@ export interface AccountSummaryView {
   totalValueAccountCurrency: number;
   totalValueBaseCurrency: number;
   baseCurrency: string;
-  performance: SimplePerformanceMetrics;
+  performance: SimplePerformanceResult;
 }
 
-export interface SimplePerformanceMetrics {
+export interface SimplePerformanceResult {
   accountId: string;
   totalValue?: number | null;
   accountCurrency?: string | null;
@@ -880,8 +1013,6 @@ export interface SimplePerformanceMetrics {
   fxRateToBase?: number | null;
   totalGainLossAmount?: number | null;
   cumulativeReturnPercent?: number | null;
-  dayGainLossAmount?: number | null;
-  dayReturnPercentModDietz?: number | null;
   portfolioWeight?: number | null;
 }
 
@@ -890,7 +1021,7 @@ export interface AccountGroup {
   accounts: AccountSummaryView[];
   totalValueBaseCurrency: number;
   baseCurrency: string;
-  performance: SimplePerformanceMetrics;
+  performance: SimplePerformanceResult;
   accountCount: number;
 }
 
@@ -938,34 +1069,76 @@ export interface ReturnData {
   value: number;
 }
 
-// Renamed from PerformanceData to match Rust struct
-export interface PerformanceMetrics {
-  id: string;
-  returns: ReturnData[];
-  periodStartDate?: string | null;
-  periodEndDate?: string | null;
-  currency: string;
-  /** Period gain in dollars (SOTA: change in unrealized P&L for HOLDINGS mode) */
-  periodGain: number;
-  /** Period return percentage (SOTA formula for HOLDINGS mode). Null when start value ≤ 0. */
-  periodReturn: number | null;
-  /** Time-weighted return (null for HOLDINGS mode - requires cash flow tracking) */
-  cumulativeTwr?: number | null;
-  /** Legacy field for backward compatibility */
-  gainLossAmount?: number | null;
-  /** Annualized TWR (null for HOLDINGS mode) */
-  annualizedTwr?: number | null;
-  simpleReturn: number;
-  annualizedSimpleReturn: number;
-  /** Money-weighted return (null for HOLDINGS mode - requires cash flow tracking) */
-  cumulativeMwr?: number | null;
-  /** Annualized MWR (null for HOLDINGS mode) */
-  annualizedMwr?: number | null;
-  volatility: number;
-  maxDrawdown: number;
-  /** Indicates if this is a HOLDINGS mode account (no cash flow tracking) */
+export interface PerformanceResult {
+  scope: PerformanceScopeDescriptor;
+  period: PerformancePeriod;
+  mode: ReturnMethod;
+  returns: PerformanceReturns;
+  attribution: PerformanceAttribution;
+  risk: PerformanceRisk;
+  dataQuality: PerformanceDataQuality;
+  series: ReturnData[];
   isHoldingsMode?: boolean;
+  isMixedTrackingMode?: boolean;
 }
+
+export type PerformanceSummaryProfile = "full" | "headline";
+
+export interface PerformanceScopeDescriptor {
+  id: string;
+  currency: string;
+}
+
+export interface PerformancePeriod {
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export type ReturnMethod = "timeWeighted" | "valueReturn" | "symbolPriceBased" | "notApplicable";
+
+export interface PerformanceReturns {
+  twr?: number | null;
+  annualizedTwr?: number | null;
+  /** Selected-period money-weighted return derived from annualized XIRR. */
+  irr?: number | null;
+  /** Annualized XIRR using dated cash flows. */
+  annualizedIrr?: number | null;
+  valueReturn?: number | null;
+  annualizedValueReturn?: number | null;
+}
+
+export interface PerformanceAttribution {
+  contributions: number;
+  distributions: number;
+  income: number;
+  realizedPnl: number;
+  unrealizedPnlChange: number;
+  fxEffect: number;
+  fees: number;
+  taxes: number;
+  residual: number;
+}
+
+export interface PerformanceRisk {
+  volatility?: number | null;
+  maxDrawdown?: number | null;
+  peakDate?: string | null;
+  troughDate?: string | null;
+  recoveryDate?: string | null;
+  drawdownDurationDays?: number | null;
+}
+
+export interface PerformanceDataQuality {
+  status: "ok" | "partial" | "noData" | "notApplicable";
+  warnings?: string[];
+  notApplicableReasons?: string[];
+}
+
+export interface PerformanceSummaryScope {
+  accountIds: string[];
+}
+
+export type PerformanceSummaryMap = Record<string, PerformanceResult>;
 
 export interface NewAsset {
   id?: string;
@@ -1033,6 +1206,7 @@ export interface TrackedItem {
   id: string;
   type: "account" | "symbol";
   name: string;
+  accountScope?: AccountScope;
 }
 
 // Addon Store Types
@@ -1243,6 +1417,8 @@ export interface BreakdownItem {
   value: string;
   /** Optional: asset ID for individual items */
   assetId?: string;
+  /** Individual items rolled up into this category, for drill-down. */
+  children?: BreakdownItem[];
 }
 
 /**
@@ -1294,7 +1470,7 @@ export interface NetWorthHistoryPoint {
   date: string;
 
   // Component values
-  /** Portfolio value from TOTAL account (investments + cash) as decimal string */
+  /** Portfolio value from aggregated real-account valuations as decimal string */
   portfolioValue: string;
   /** Alternative assets value (properties, vehicles, collectibles, etc.) as decimal string */
   alternativeAssetsValue: string;
@@ -1310,6 +1486,14 @@ export interface NetWorthHistoryPoint {
   // For gain calculation
   /** Cumulative net contributions (deposits - withdrawals) from portfolio as decimal string */
   netContribution: string;
+
+  /**
+   * Per-category / per-liability values at this date as decimal strings.
+   * Keys mirror the point-in-time breakdown: asset category keys (`cash`,
+   * `investments`, `properties`, ...) for aggregated asset categories, and the
+   * individual liability id (matching `BreakdownItem.assetId`) for each liability.
+   */
+  breakdown: Record<string, string>;
 
   /** Currency */
   currency: string;
@@ -1426,6 +1610,8 @@ export interface NetWorthConfig {
 /**
  * Taxonomy - a classification system (e.g., "Asset Classes", "Regions", "Industries")
  */
+export type TaxonomyScope = "asset" | "activity";
+
 export interface Taxonomy {
   id: string;
   name: string;
@@ -1436,6 +1622,8 @@ export interface Taxonomy {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** What entity kind this taxonomy classifies. Defaults to "asset" for backwards compat. */
+  scope: TaxonomyScope;
 }
 
 /**
@@ -1452,6 +1640,8 @@ export interface TaxonomyCategory {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** Optional Lucide icon name for UI display (used by spending categories). */
+  icon?: string | null;
 }
 
 /**
@@ -1487,6 +1677,7 @@ export interface NewTaxonomy {
   isSystem: boolean;
   isSingleSelect: boolean;
   sortOrder: number;
+  scope?: TaxonomyScope;
 }
 
 /**
@@ -1501,6 +1692,7 @@ export interface NewTaxonomyCategory {
   color: string;
   description?: string | null;
   sortOrder: number;
+  icon?: string | null;
 }
 
 /**
@@ -1936,6 +2128,8 @@ export interface SnapshotInfo {
   positionCount: number;
   /** Number of cash currencies in this snapshot */
   cashCurrencyCount: number;
+  /** Total cash converted to account currency */
+  cashTotalAccountCurrency: string;
 }
 
 // ============================================================================
@@ -2144,4 +2338,160 @@ export interface SaveUpTrajectoryPointDTO {
 
 export interface SaveUpProjectionPointDTO extends SaveUpTrajectoryPointDTO {
   range: [number, number];
+}
+
+// ============================================================================
+// Allocation Target Types
+// ============================================================================
+
+export type TargetScopeType = "all" | "portfolio" | "account";
+export type TriggerType = "manual" | "threshold";
+export type RebalanceGoal = "nearest_band" | "exact_target";
+export type ScenarioMode = "cash_flow_only" | "sell_to_rebalance" | "hybrid";
+export type DriftStatus = "in_band" | "underweight" | "overweight" | "not_targeted";
+export type RebalanceTo = "nearest_band" | "exact_target";
+
+export interface AllocationTarget {
+  id: string;
+  name: string;
+  scopeType: TargetScopeType;
+  scopeId?: string | null;
+  taxonomyId: string;
+  triggerType: TriggerType;
+  driftBandBps: number;
+  rebalanceGoal: RebalanceGoal;
+  minTradeAmount: string;
+  wholeSharesOnly: boolean;
+  allowSells: boolean;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string | null;
+}
+
+export interface NewAllocationTarget {
+  name: string;
+  scopeType: TargetScopeType;
+  scopeId?: string | null;
+  taxonomyId: string;
+  triggerType: TriggerType;
+  driftBandBps: number;
+  rebalanceGoal?: RebalanceGoal;
+  minTradeAmount?: string;
+  wholeSharesOnly?: boolean;
+  allowSells?: boolean;
+}
+
+export interface AllocationTargetWeight {
+  id: string;
+  targetId: string;
+  taxonomyId: string;
+  categoryId: string;
+  targetBps: number;
+  isLocked: boolean;
+  isRequired: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewAllocationTargetWeight {
+  categoryId: string;
+  targetBps: number;
+  isLocked: boolean;
+  isRequired: boolean;
+}
+
+export interface SaveAllocationTargetResult {
+  target: AllocationTarget;
+  weights: AllocationTargetWeight[];
+}
+
+export interface DriftRow {
+  categoryId: string;
+  categoryName: string;
+  color: string;
+  currentBps: number;
+  targetBps: number;
+  driftBps: number;
+  currentValue: number;
+  targetValue: number;
+  valueDelta: number;
+  status: DriftStatus;
+  isRequired: boolean;
+  isZeroCurrent: boolean;
+  isCash: boolean;
+}
+
+export interface DriftReport {
+  targetId: string;
+  scopeType: TargetScopeType;
+  scopeId?: string | null;
+  totalValue: number;
+  baseCurrency: string;
+  maxDriftBps: number;
+  outOfBandCount: number;
+  rows: DriftRow[];
+  holdings?: DriftHoldingsReport | null;
+}
+
+export interface DriftHoldingRow {
+  id: string;
+  holdingId: string;
+  assetId: string;
+  accountId: string;
+  sourceAccountIds?: string[];
+  symbol: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+  categoryColor?: string | null;
+  value: number;
+  currentPct: number;
+  targetPct?: number | null;
+  driftBps?: number | null;
+  isUnknownCategory: boolean;
+  isCash: boolean;
+}
+
+export interface DriftHoldingsReport {
+  targetId: string;
+  totalValue: number;
+  baseCurrency: string;
+  rows: DriftHoldingRow[];
+}
+
+export type RebalanceWarningKind =
+  | "missing_quote"
+  | "no_buy_candidate"
+  | "unclassified_asset"
+  | "partial_classification";
+
+export interface RebalanceWarning {
+  kind: RebalanceWarningKind;
+  categoryId: string;
+  message: string;
+}
+
+export interface SuggestedManualTrade {
+  action: string;
+  categoryId: string;
+  categoryName: string;
+  assetId?: string | null;
+  symbol?: string | null;
+  name?: string | null;
+  quantity?: number | null;
+  estimatedPrice?: number | null;
+  estimatedAmount: number;
+  reason: string;
+}
+
+export interface RebalancePlan {
+  targetId: string;
+  availableCash: number;
+  cashUsed: number;
+  cashRemaining: number;
+  maxDriftBpsBefore: number;
+  maxDriftBpsAfter: number;
+  trades: SuggestedManualTrade[];
+  warnings: RebalanceWarning[];
+  afterBpsByCategory: Record<string, number>;
 }
