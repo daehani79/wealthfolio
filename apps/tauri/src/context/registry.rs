@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{atomic::AtomicBool, Arc, RwLock};
 use wealthfolio_ai::{AiProviderServiceTrait, ChatService};
 use wealthfolio_connect::BrokerSyncServiceTrait;
 use wealthfolio_core::{
@@ -18,7 +18,9 @@ use wealthfolio_spending::events::EventsService;
 use wealthfolio_spending::insight::InsightService;
 use wealthfolio_spending::settings::SpendingSettingsService;
 use wealthfolio_storage_sqlite::{
-    portfolio::snapshot::SnapshotRepository, sync::AppSyncRepository,
+    agent::{McpAuditRepository, PatRepository},
+    portfolio::snapshot::SnapshotRepository,
+    sync::AppSyncRepository,
 };
 
 use super::TauriAiEnvironment;
@@ -66,8 +68,12 @@ pub struct ServiceContext {
     pub connect_service: Arc<ConnectService>,
     pub ai_provider_service: Arc<dyn AiProviderServiceTrait>,
     pub ai_chat_service: Arc<ChatService<TauriAiEnvironment>>,
+    pub agent_environment: Arc<dyn wealthfolio_agent_tools::AgentEnvironment>,
+    pub mcp_audit_repository: Arc<McpAuditRepository>,
+    pub pat_repository: Arc<PatRepository>,
     pub device_enroll_service: Arc<DeviceEnrollService>,
     pub device_sync_runtime: Arc<DeviceSyncRuntimeState>,
+    pub broker_sync_running: Arc<AtomicBool>,
     pub health_service: Arc<health::HealthService>,
     pub custom_provider_service: Arc<wealthfolio_core::custom_provider::CustomProviderService>,
     pub portfolio_service: Arc<dyn portfolios::PortfolioServiceTrait>,
@@ -233,6 +239,18 @@ impl ServiceContext {
         Arc::clone(&self.ai_chat_service)
     }
 
+    pub fn agent_environment(&self) -> Arc<dyn wealthfolio_agent_tools::AgentEnvironment> {
+        Arc::clone(&self.agent_environment)
+    }
+
+    pub fn mcp_audit_repository(&self) -> Arc<McpAuditRepository> {
+        Arc::clone(&self.mcp_audit_repository)
+    }
+
+    pub fn pat_repository(&self) -> Arc<PatRepository> {
+        Arc::clone(&self.pat_repository)
+    }
+
     pub fn portfolio_service(&self) -> Arc<dyn portfolios::PortfolioServiceTrait> {
         Arc::clone(&self.portfolio_service)
     }
@@ -243,6 +261,10 @@ impl ServiceContext {
 
     pub fn device_sync_runtime(&self) -> Arc<DeviceSyncRuntimeState> {
         Arc::clone(&self.device_sync_runtime)
+    }
+
+    pub fn broker_sync_running(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.broker_sync_running)
     }
 
     pub fn health_service(&self) -> Arc<health::HealthService> {

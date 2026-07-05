@@ -29,7 +29,10 @@ use crate::db::{get_connection, WriteHandle};
 use crate::errors::StorageError;
 use crate::schema::{
     accounts, activities, assets, import_account_templates, import_runs, import_templates,
+    spending_activity_splits,
 };
+use crate::spending::activity_splits::ActivitySplitDB;
+use crate::spending::activity_sync::should_sync_activity_local_id_outbox;
 use crate::sync::broker_activity_patch::{
     apply_pending_broker_activity_user_patches_tx, broker_activity_identity,
     broker_activity_user_overlay_changed, broker_activity_user_patch_request,
@@ -154,6 +157,45 @@ fn queue_activity_update_outbox(
     Ok(())
 }
 
+fn activity_update_invalidates_spending_splits(before: &ActivityDB, after: &ActivityDB) -> bool {
+    before.account_id != after.account_id
+        || before.activity_type != after.activity_type
+        || before.activity_type_override != after.activity_type_override
+        || before.subtype != after.subtype
+        || before.amount != after.amount
+        || before.source_group_id != after.source_group_id
+}
+
+fn clear_spending_splits_for_activity_tx(
+    tx: &mut crate::db::write_actor::DbWriteTx<'_>,
+    activity_id: &str,
+) -> Result<()> {
+    let existing_ids = spending_activity_splits::table
+        .filter(spending_activity_splits::activity_id.eq(activity_id))
+        .select(spending_activity_splits::id)
+        .load::<String>(tx.conn())
+        .map_err(StorageError::from)?;
+    if existing_ids.is_empty() {
+        return Ok(());
+    }
+
+    let should_sync = should_sync_activity_local_id_outbox(tx.conn(), activity_id)?;
+    diesel::delete(
+        spending_activity_splits::table
+            .filter(spending_activity_splits::activity_id.eq(activity_id)),
+    )
+    .execute(tx.conn())
+    .map_err(StorageError::from)?;
+
+    if should_sync {
+        for id in existing_ids {
+            tx.delete::<ActivitySplitDB>(id);
+        }
+    }
+
+    Ok(())
+}
+
 fn preserve_broker_base_type(
     activity: &mut ActivityDB,
     existing_activity_type: &str,
@@ -267,7 +309,10 @@ fn source_group_blocks_transfer_link(
         return Ok(false);
     };
     if transfer_in.account_id == transfer_out.account_id {
-        return Ok(false);
+        return Ok(is_same_account_cash_fx_conversion_db(
+            transfer_in,
+            transfer_out,
+        ));
     }
 
     Ok(validate_link_transfer_asset_shape(transfer_in, transfer_out).is_ok())
@@ -294,6 +339,25 @@ fn parse_optional_decimal(value: Option<&String>) -> Option<Decimal> {
     value
         .and_then(|value| Decimal::from_str(value.trim()).ok())
         .map(|value| value.abs())
+}
+
+fn has_positive_cash_amount(activity: &ActivityDB) -> bool {
+    parse_optional_decimal(activity.amount.as_ref()).is_some_and(|amount| !amount.is_zero())
+}
+
+fn is_same_account_cash_fx_conversion_db(
+    transfer_in: &ActivityDB,
+    transfer_out: &ActivityDB,
+) -> bool {
+    transfer_in.account_id == transfer_out.account_id
+        && non_cash_transfer_asset_key(transfer_in).is_none()
+        && non_cash_transfer_asset_key(transfer_out).is_none()
+        && has_positive_cash_amount(transfer_in)
+        && has_positive_cash_amount(transfer_out)
+        && !transfer_in
+            .currency
+            .trim()
+            .eq_ignore_ascii_case(transfer_out.currency.trim())
 }
 
 fn validate_link_transfer_asset_shape(
@@ -351,6 +415,7 @@ impl ActivityRepository {
         date_from_utc: Option<DateTime<Utc>>,
         date_to_utc_exclusive: Option<DateTime<Utc>>,
         instrument_type_filter: Option<Vec<String>>,
+        activity_id_filter: Option<Vec<String>>,
     ) -> Result<ActivitySearchResponse> {
         let mut conn = get_connection(&self.pool)?;
 
@@ -363,6 +428,9 @@ impl ActivityRepository {
                 .filter(accounts::is_archived.eq(false))
                 .into_boxed();
 
+            if let Some(ref activity_ids) = activity_id_filter {
+                query = query.filter(activities::id.eq_any(activity_ids));
+            }
             if let Some(ref account_ids) = account_id_filter {
                 query = query.filter(activities::account_id.eq_any(account_ids));
             }
@@ -381,6 +449,7 @@ impl ActivityRepository {
                         .like(pattern.clone())
                         .or(assets::name.like(pattern.clone()))
                         .or(assets::display_code.like(pattern.clone()))
+                        .or(activities::subtype.like(pattern.clone()))
                         .or(activities::notes.like(pattern)),
                 );
             }
@@ -484,6 +553,7 @@ impl ActivityRepository {
                 activities::unit_price,
                 activities::currency,
                 activities::fee,
+                activities::tax,
                 activities::amount,
                 activities::notes,
                 activities::fx_rate,
@@ -605,6 +675,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
         date_from: Option<NaiveDate>,      // Optional start date filter (inclusive)
         date_to: Option<NaiveDate>,        // Optional end date filter (inclusive)
         instrument_type_filter: Option<Vec<String>>, // Optional instrument_type filter
+        activity_id_filter: Option<Vec<String>>, // Optional exact activity-id filter
     ) -> Result<ActivitySearchResponse> {
         let date_from_utc = date_from.map(Self::naive_date_start_utc);
         let date_to_utc_exclusive = date_to
@@ -622,6 +693,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
             date_from_utc,
             date_to_utc_exclusive,
             instrument_type_filter,
+            activity_id_filter,
         )
     }
 
@@ -638,6 +710,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
         date_from_utc: Option<DateTime<Utc>>,
         date_to_utc_exclusive: Option<DateTime<Utc>>,
         instrument_type_filter: Option<Vec<String>>,
+        activity_id_filter: Option<Vec<String>>,
     ) -> Result<ActivitySearchResponse> {
         self.search_activities_with_utc_bounds(
             page,
@@ -650,6 +723,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
             date_from_utc,
             date_to_utc_exclusive,
             instrument_type_filter,
+            activity_id_filter,
         )
     }
 
@@ -710,6 +784,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
                     unit_price,
                     amount,
                     fee,
+                    tax,
                     ..
                 } = existing;
 
@@ -721,6 +796,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
                 activity_to_update.amount =
                     apply_decimal_patch(amount, activity_update_owned.amount);
                 activity_to_update.fee = apply_decimal_patch(fee, activity_update_owned.fee);
+                activity_to_update.tax = apply_decimal_patch(tax, activity_update_owned.tax);
                 activity_to_update.fx_rate =
                     apply_decimal_patch(fx_rate, activity_update_owned.fx_rate);
                 // Preserve source identity fields
@@ -773,6 +849,12 @@ impl ActivityRepositoryTrait for ActivityRepository {
                         .set(&activity_to_update)
                         .get_result::<ActivityDB>(tx.conn())
                         .map_err(StorageError::from)?;
+                if activity_update_invalidates_spending_splits(
+                    &existing_before_update,
+                    &updated_activity,
+                ) {
+                    clear_spending_splits_for_activity_tx(tx, &updated_activity.id)?;
+                }
                 queue_activity_update_outbox(
                     tx,
                     &existing_before_update,
@@ -874,9 +956,12 @@ impl ActivityRepositoryTrait for ActivityRepository {
                         "One or both activities are already linked to another transfer".to_string(),
                     )));
                 }
-                if transfer_in.account_id == transfer_out.account_id {
+                if transfer_in.account_id == transfer_out.account_id
+                    && !is_same_account_cash_fx_conversion_db(&transfer_in, &transfer_out)
+                {
                     return Err(Error::from(ActivityError::InvalidData(
-                        "Both transfer legs share the same account".to_string(),
+                        "Same-account transfer links must be cash FX conversions with different currencies"
+                            .to_string(),
                     )));
                 }
                 validate_link_transfer_asset_shape(&transfer_in, &transfer_out)?;
@@ -1111,6 +1196,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
                         unit_price,
                         amount,
                         fee,
+                        tax,
                         fx_rate,
                         ..
                     } = existing;
@@ -1121,6 +1207,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
                         apply_decimal_patch(unit_price, update_owned.unit_price);
                     activity_db.amount = apply_decimal_patch(amount, update_owned.amount);
                     activity_db.fee = apply_decimal_patch(fee, update_owned.fee);
+                    activity_db.tax = apply_decimal_patch(tax, update_owned.tax);
                     activity_db.fx_rate = apply_decimal_patch(fx_rate, update_owned.fx_rate);
                     if activity_db.source_system.is_none() {
                         activity_db.source_system = source_system;
@@ -1496,9 +1583,9 @@ impl ActivityRepositoryTrait for ActivityRepository {
                     .map_err(StorageError::from)?;
 
                 let now = Utc::now().naive_utc();
-                // Preserve the existing row id so the sync entity_id stays stable across
+                // Preserve the existing row id so the sync subject_id stays stable across
                 // updates. Generating a new UUID on every upsert would cause the outbox to
-                // emit a different entity_id than the row that already lives on remote devices,
+                // emit a different subject_id than the row that already lives on remote devices,
                 // making their replay INSERT collide on UNIQUE(account_id, context_kind, source_system).
                 let existing_link_id = existing_link.as_ref().map(|l| l.id.clone());
                 let account_local_id = if mapping.context_kind == import_type::HOLDINGS {
@@ -1585,7 +1672,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
             .exec_tx(move |tx| -> Result<()> {
                 use chrono::Utc;
                 let now = Utc::now().naive_utc();
-                // Reuse the existing row id to keep the sync entity_id stable across updates.
+                // Reuse the existing row id to keep the sync subject_id stable across updates.
                 let existing_id: Option<String> = import_account_templates::table
                     .filter(import_account_templates::account_id.eq(&account_id))
                     .filter(import_account_templates::context_kind.eq(&context_kind))
@@ -2469,6 +2556,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
                             activities::unit_price.eq(excluded(activities::unit_price)),
                             activities::currency.eq(excluded(activities::currency)),
                             activities::fee.eq(excluded(activities::fee)),
+                            activities::tax.eq(excluded(activities::tax)),
                             activities::amount.eq(excluded(activities::amount)),
                             activities::status.eq(excluded(activities::status)),
                             activities::notes.eq(excluded(activities::notes)),
@@ -2627,7 +2715,7 @@ impl ActivityRepositoryTrait for ActivityRepository {
 mod tests {
     use super::*;
     use crate::db::{create_pool, get_connection, init, run_migrations, write_actor::spawn_writer};
-    use crate::schema::sync_outbox;
+    use crate::schema::{spending_activity_splits, sync_outbox};
     use rust_decimal::Decimal;
     use tempfile::tempdir;
     use wealthfolio_core::activities::{import_type, ActivityStatus, ActivityUpsert};
@@ -2704,6 +2792,7 @@ mod tests {
         source_record_id: &'a str,
         amount: &'a str,
         notes: &'a str,
+        subtype: Option<&'a str>,
     }
 
     fn insert_broker_activity(conn: &mut SqliteConnection, seed: BrokerActivitySeed<'_>) {
@@ -2713,7 +2802,7 @@ mod tests {
               status, activity_date, settlement_date, quantity, unit_price, amount, fee, currency, \
               fx_rate, notes, metadata, source_system, source_record_id, source_group_id, \
               idempotency_key, import_run_id, is_user_modified, needs_review, created_at, updated_at) \
-             VALUES ('{}', 'broker-local-account', NULL, '{}', {}, NULL, NULL, \
+             VALUES ('{}', 'broker-local-account', NULL, '{}', {}, NULL, {}, \
                      'POSTED', '2026-01-01T00:00:00Z', NULL, '10', '5', '{}', '1', 'USD', \
                      NULL, '{}', '{{\"broker\":\"keep\"}}', '{}', '{}', \
                      NULL, 'local-idempotency-key-{}', 'local-import-run', 0, 0, \
@@ -2721,6 +2810,7 @@ mod tests {
             seed.id,
             seed.activity_type,
             sql_value(seed.activity_type_override),
+            sql_value(seed.subtype),
             seed.amount,
             seed.notes.replace('\'', "''"),
             seed.source_system,
@@ -2778,6 +2868,26 @@ mod tests {
         source_group_id: Option<&str>,
         metadata: Option<&str>,
     ) {
+        insert_transfer_activity_with_currency(
+            conn,
+            id,
+            account_id,
+            activity_type,
+            source_group_id,
+            metadata,
+            "USD",
+        );
+    }
+
+    fn insert_transfer_activity_with_currency(
+        conn: &mut SqliteConnection,
+        id: &str,
+        account_id: &str,
+        activity_type: &str,
+        source_group_id: Option<&str>,
+        metadata: Option<&str>,
+        currency: &str,
+    ) {
         let activity = ActivityDB {
             id: id.to_string(),
             account_id: account_id.to_string(),
@@ -2793,7 +2903,8 @@ mod tests {
             unit_price: None,
             amount: Some("100".to_string()),
             fee: Some("0".to_string()),
-            currency: "USD".to_string(),
+            tax: None,
+            currency: currency.to_string(),
             fx_rate: None,
             notes: None,
             metadata: metadata.map(str::to_string),
@@ -2873,6 +2984,7 @@ mod tests {
             unit_price: None,
             currency: "USD".to_string(),
             fee: None,
+            tax: None,
             amount: None,
             status: Some(ActivityStatus::Posted),
             notes: Some("User note".to_string()),
@@ -2947,6 +3059,7 @@ mod tests {
                     source_record_id: "broker-record-sell",
                     amount: "50",
                     notes: "Broker override",
+                    subtype: Some("INTERNALSECURITYTRANSFER"),
                 },
             );
             insert_broker_activity(
@@ -2959,6 +3072,7 @@ mod tests {
                     source_record_id: "broker-record-dividend",
                     amount: "5",
                     notes: "Broker dividend",
+                    subtype: None,
                 },
             );
         }
@@ -2975,11 +3089,32 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
             )
             .expect("search by effective type");
         assert_eq!(filtered.data.len(), 1);
         assert_eq!(filtered.data[0].id, "broker-buy-override");
         assert_eq!(filtered.data[0].activity_type, "SELL");
+
+        // Server-side filter by exact activity id returns just that activity,
+        // regardless of other rows or paging.
+        let by_id = repo
+            .search_activities(
+                0,
+                10,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(vec!["broker-dividend".to_string()]),
+            )
+            .expect("search by activity id");
+        assert_eq!(by_id.data.len(), 1);
+        assert_eq!(by_id.data[0].id, "broker-dividend");
 
         let sorted = repo
             .search_activities(
@@ -2996,6 +3131,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
             )
             .expect("sort by effective type");
         let ids: Vec<&str> = sorted
@@ -3004,6 +3140,24 @@ mod tests {
             .map(|activity| activity.id.as_str())
             .collect();
         assert_eq!(ids, vec!["broker-dividend", "broker-buy-override"]);
+
+        let subtype_match = repo
+            .search_activities(
+                0,
+                10,
+                None,
+                None,
+                Some("InternalSecurityTransfer".to_string()),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .expect("search by subtype keyword");
+        assert_eq!(subtype_match.data.len(), 1);
+        assert_eq!(subtype_match.data[0].id, "broker-buy-override");
     }
 
     #[tokio::test]
@@ -3058,6 +3212,7 @@ mod tests {
                 Some(date_from_utc),
                 Some(date_to_utc_exclusive),
                 None,
+                None,
             )
             .expect("search by utc range");
 
@@ -3083,6 +3238,7 @@ mod tests {
                     source_record_id: "broker-record-override",
                     amount: "50",
                     notes: "Old note",
+                    subtype: None,
                 },
             );
         }
@@ -3098,6 +3254,7 @@ mod tests {
             unit_price: None,
             currency: "USD".to_string(),
             fee: None,
+            tax: None,
             amount: None,
             status: Some(ActivityStatus::Posted),
             notes: Some("New note".to_string()),
@@ -3132,6 +3289,7 @@ mod tests {
             unit_price: None,
             currency: "USD".to_string(),
             fee: None,
+            tax: None,
             amount: None,
             status: Some(ActivityStatus::Posted),
             notes: Some("New note".to_string()),
@@ -3167,6 +3325,7 @@ mod tests {
                     source_record_id: "broker-record-owned",
                     amount: "50",
                     notes: "Broker note",
+                    subtype: None,
                 },
             );
         }
@@ -3182,6 +3341,7 @@ mod tests {
             unit_price: None,
             currency: "USD".to_string(),
             fee: None,
+            tax: None,
             amount: Some(Some(Decimal::new(6000, 2))),
             status: Some(ActivityStatus::Posted),
             notes: Some("Broker note".to_string()),
@@ -3225,6 +3385,7 @@ mod tests {
             unit_price: Some("100".to_string()),
             amount: Some("100".to_string()),
             fee: Some("0".to_string()),
+            tax: None,
             currency: "USD".to_string(),
             fx_rate: None,
             notes: None,
@@ -3244,6 +3405,18 @@ mod tests {
             .values(&activity)
             .execute(conn)
             .expect("insert activity with subtype");
+    }
+
+    fn insert_spending_split(conn: &mut SqliteConnection, id: &str, activity_id: &str) {
+        diesel::sql_query(format!(
+            "INSERT INTO spending_activity_splits \
+             (id, activity_id, taxonomy_id, category_id, amount, note, sort_order, created_at, updated_at) \
+             VALUES ('{}', '{}', 'spending_categories', 'cat_food', '100', NULL, 0, \
+                     '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+            id, activity_id
+        ))
+        .execute(conn)
+        .expect("insert spending split");
     }
 
     fn activity_metadata(conn: &mut SqliteConnection, id: &str) -> serde_json::Value {
@@ -3397,6 +3570,7 @@ mod tests {
                 unit_price: None,
                 currency: "USD".to_string(),
                 fee: None,
+                tax: None,
                 amount: None,
                 status: None,
                 notes: None,
@@ -3407,6 +3581,55 @@ mod tests {
             .expect("update activity");
 
         assert_eq!(updated.subtype, None);
+    }
+
+    #[tokio::test]
+    async fn update_activity_amount_clears_spending_splits() {
+        let (pool, writer) = setup_db();
+        let repo = ActivityRepository::new(pool.clone(), writer);
+        {
+            let mut conn = get_connection(&pool).expect("conn");
+            insert_account(&mut conn, "acc-splits");
+            insert_activity_with_subtype(
+                &mut conn,
+                "activity-with-splits",
+                "acc-splits",
+                "WITHDRAWAL",
+                None,
+                None,
+            );
+            insert_spending_split(&mut conn, "split-before-edit", "activity-with-splits");
+        }
+
+        repo.update_activity(ActivityUpdate {
+            id: "activity-with-splits".to_string(),
+            account_id: "acc-splits".to_string(),
+            asset: None,
+            activity_type: "WITHDRAWAL".to_string(),
+            subtype: None,
+            activity_date: "2024-01-15T00:00:00+00:00".to_string(),
+            quantity: None,
+            unit_price: None,
+            currency: "USD".to_string(),
+            fee: None,
+            tax: None,
+            amount: Some(Some(Decimal::new(125, 0))),
+            status: None,
+            notes: None,
+            fx_rate: None,
+            metadata: None,
+        })
+        .await
+        .expect("update activity");
+
+        let mut conn = get_connection(&pool).expect("conn");
+        assert_eq!(
+            spending_activity_splits::table
+                .count()
+                .get_result::<i64>(&mut conn)
+                .expect("count splits"),
+            0
+        );
     }
 
     #[tokio::test]
@@ -3457,8 +3680,8 @@ mod tests {
     }
 
     /// Regression: re-linking the same (account_id, context_kind, source_system) must preserve the row `id`
-    /// so that sync outbox events keep a stable entity_id across updates. Generating a new UUID
-    /// on every upsert causes remote devices to receive a different entity_id and fail with a
+    /// so that sync outbox events keep a stable subject_id across updates. Generating a new UUID
+    /// on every upsert causes remote devices to receive a different subject_id and fail with a
     /// UNIQUE(account_id, context_kind, source_system) constraint error on replay.
     #[tokio::test]
     async fn relink_preserves_row_id() {
@@ -3497,7 +3720,7 @@ mod tests {
         // id must be stable — changing the linked template must not rotate the sync identity
         assert_eq!(
             id_after_first, id_after_relink,
-            "row id changed on relink; sync entity_id would diverge from remote devices"
+            "row id changed on relink; sync subject_id would diverge from remote devices"
         );
 
         // template_id must have been updated
@@ -3510,7 +3733,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn link_transfer_activities_marks_user_modified_and_rejects_same_account() {
+    async fn link_transfer_activities_marks_user_modified_and_allows_same_account_cash_fx() {
         let (pool, writer) = setup_db();
         let repo = ActivityRepository::new(pool.clone(), writer);
         let mut conn = get_connection(&pool).expect("conn");
@@ -3541,6 +3764,24 @@ mod tests {
             None,
             None,
         );
+        insert_transfer_activity_with_currency(
+            &mut conn,
+            "same-account-fx-out",
+            "acc-a",
+            "TRANSFER_OUT",
+            None,
+            Some(r#"{"flow":{"is_external":true}}"#),
+            "USD",
+        );
+        insert_transfer_activity_with_currency(
+            &mut conn,
+            "same-account-fx-in",
+            "acc-a",
+            "TRANSFER_IN",
+            None,
+            Some(r#"{"flow":{"is_external":true}}"#),
+            "CAD",
+        );
 
         let same_account = repo
             .link_transfer_activities("same-account-in".to_string(), "transfer-out".to_string())
@@ -3552,6 +3793,30 @@ mod tests {
             .first(&mut conn)
             .expect("same-account-in group");
         assert_eq!(same_account_group, None);
+
+        let (same_account_fx_in, same_account_fx_out) = repo
+            .link_transfer_activities(
+                "same-account-fx-in".to_string(),
+                "same-account-fx-out".to_string(),
+            )
+            .await
+            .expect("same-account cash FX link should succeed");
+        assert_eq!(same_account_fx_in.account_id, "acc-a");
+        assert_eq!(same_account_fx_out.account_id, "acc-a");
+        assert_eq!(
+            same_account_fx_in.source_group_id,
+            same_account_fx_out.source_group_id
+        );
+        assert_eq!(
+            same_account_fx_in.metadata.as_ref().and_then(|m| {
+                m.get("flow")
+                    .and_then(|flow| flow.get("is_external"))
+                    .and_then(|value| value.as_bool())
+            }),
+            Some(false)
+        );
+        assert_eq!(activity_user_modified(&mut conn, "same-account-fx-in"), 1);
+        assert_eq!(activity_user_modified(&mut conn, "same-account-fx-out"), 1);
 
         let (transfer_in, transfer_out) = repo
             .link_transfer_activities("transfer-in".to_string(), "transfer-out".to_string())
@@ -3582,7 +3847,7 @@ mod tests {
         );
         assert_eq!(activity_user_modified(&mut conn, "transfer-in"), 1);
         assert_eq!(activity_user_modified(&mut conn, "transfer-out"), 1);
-        assert_eq!(sync_outbox_count(&mut conn), 2);
+        assert_eq!(sync_outbox_count(&mut conn), 4);
     }
 
     #[tokio::test]
@@ -3658,6 +3923,7 @@ mod tests {
                 unit_price: Some(None),
                 currency: "USD".to_string(),
                 fee: Some(None),
+                tax: None,
                 amount: Some(Some(Decimal::new(100, 0))),
                 status: Some(ActivityStatus::Posted),
                 notes: None,
@@ -3816,6 +4082,7 @@ mod tests {
                 source_record_id: "broker-transfer-record-in",
                 amount: "100",
                 notes: "Broker transfer in",
+                subtype: None,
             },
         );
         insert_transfer_activity(
@@ -4025,6 +4292,7 @@ mod tests {
                 source_record_id: "broker-transfer-record-in",
                 amount: "100",
                 notes: "Broker transfer in",
+                subtype: None,
             },
         );
         diesel::update(activities::table.find("broker-transfer-in"))
@@ -4150,6 +4418,7 @@ mod tests {
             unit_price: Some(Decimal::from(100)),
             currency: "USD".to_string(),
             fee: Some(Decimal::ZERO),
+            tax: None,
             amount: Some(Decimal::from(100)),
             status: None,
             notes: Some("first import".to_string()),
@@ -4174,6 +4443,7 @@ mod tests {
             unit_price: Some(Decimal::from(101)),
             currency: "USD".to_string(),
             fee: Some(Decimal::ZERO),
+            tax: None,
             amount: Some(Decimal::from(101)),
             status: None,
             notes: Some("updated import".to_string()),
@@ -4258,6 +4528,7 @@ mod tests {
             unit_price: Some(Decimal::from(100)),
             currency: "USD".to_string(),
             fee: Some(Decimal::ZERO),
+            tax: None,
             amount: Some(Decimal::from(100)),
             status: None,
             notes: Some("first import".to_string()),
@@ -4282,6 +4553,7 @@ mod tests {
             unit_price: Some(Decimal::from(101)),
             currency: "USD".to_string(),
             fee: Some(Decimal::ZERO),
+            tax: None,
             amount: Some(Decimal::from(101)),
             status: None,
             notes: Some("updated import".to_string()),
