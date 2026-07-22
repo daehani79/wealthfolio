@@ -35,6 +35,7 @@ export type {
   NetworkRequest,
   NetworkResponse,
   SnapshotsAPI,
+  StorageAPI,
   ToastAPI,
   DividendEvent,
   FetchDividendsOptions,
@@ -50,6 +51,9 @@ export type * from './data-types';
 // Manifest and metadata types
 export type {
   AddonFile,
+  AddonContributedLink,
+  AddonContributedRoute,
+  AddonContributes,
   AddonHostDependencies,
   AddonInstallResult,
   AddonManifest,
@@ -74,9 +78,11 @@ export type {
 } from './permissions';
 
 export {
+  BASELINE_PERMISSION_CATEGORIES,
   getFunctionRiskLevel,
   getPermissionCategoriesByRisk,
   getPermissionCategory,
+  isBaselineCategory,
   isPermissionRequired,
   PERMISSION_CATEGORIES,
 } from './permissions';
@@ -100,6 +106,10 @@ export { calculateGoalProgress } from './goal-progress';
 export const ReactVersion = '19.2.4';
 
 export { HOST_DEPENDENCIES } from './host-dependencies';
+
+// Sidebar icon names (see SidebarItemConfig.icon)
+export { ADDON_ICON_NAMES } from './icons';
+export type { AddonIconName } from './icons';
 
 /**
  * Addons receive their context as a parameter to the enable() function.
