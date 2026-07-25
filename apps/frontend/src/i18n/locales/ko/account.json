@@ -55,7 +55,7 @@
   "to": "종료일",
   "contributed_amount": "기여한 금액",
   "so_far_in": "현재까지",
-  "no_limit_set": "이 계좌에는 기여 한도가 설정되어 있지 않습니다.",
+  "no_limit_set": "이 계좌에는 납입 한도가 설정되어 있지 않습니다.",
   "total_contribution": "총 기여금",
   "limit_is": "한도는",
   "over_limit": "초과 한도:",

@@ -172,7 +172,7 @@
     "colSymbol": "기호",
     "colName": "이름",
     "colValue": "가치",
-    "colWeight": "무게"
+    "colWeight": "비중"
   },
   "assetClassification": {
     "matchTaxonomyError": "요청된 분류 체계와 일치시킬 수 없습니다. 대신 사용 가능한 자산 분류 체계를 사용하겠습니다.",
@@ -331,7 +331,7 @@
     "holdingsLabel": "보유{{label}}",
     "colSymbol": "기호",
     "colValue": "가치",
-    "colWeight": "무게",
+    "colWeight": "비중",
     "colGain": "이득",
     "return": "돌아가다",
     "pnl": "손익계산서",

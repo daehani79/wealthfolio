@@ -697,7 +697,7 @@
       "fx_rate": "외환 환율",
       "account": "계정",
       "currency": "통화",
-      "instrument": "악기",
+      "instrument": "금융상품",
       "comment": "어떻게",
       "external": "외부"
     },
@@ -925,7 +925,7 @@
       "subtype": "하위 유형",
       "external": "외부",
       "symbol": "기호",
-      "instrument": "악기",
+      "instrument": "금융상품",
       "quantity": "수량",
       "price": "가격",
       "amount": "금액",

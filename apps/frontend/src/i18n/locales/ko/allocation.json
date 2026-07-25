@@ -25,7 +25,7 @@
     "minimumBandNote": "목표 무게와 관계없이 모든 소매에 대한 최소 밴드."
   },
   "donut": {
-    "belowTarget": "▼ 목표 아래",
+    "belowTarget": "▼ 목표 미달",
     "aboveTarget": "▲ 목표 초과",
     "portfolio": "포트폴리오"
   },
@@ -152,7 +152,7 @@
     "target": "대상",
     "tgt": "표적",
     "drift": "운영",
-    "max": "맥스"
+    "max": "최대"
   },
   "warnings": {
     "missingQuote": "따옴표 누락",
@@ -286,7 +286,7 @@
     "goal": "목표",
     "nearestBand": "가장 가까운 밴드",
     "exactTarget": "정확한 목표",
-    "goalExactNote": "각 소매가 정확히 목표 무게에 도달할 때까지 현금을 배치하세요.",
+    "goalExactNote": "각 소매가 정확히 목표 비중에 도달할 때까지 현금을 배치하세요.",
     "goalNearestNote": "각 소매가 드리프트 허용 범위 내에 들어가면 멈추십시오.",
     "shareSizing": "공유 크기",
     "fractional": "분수의",

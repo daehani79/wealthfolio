@@ -1,8 +1,8 @@
 {
   "common": {
     "amount": "금액",
-    "min": "민",
-    "max": "맥스",
+    "min": "최소",
+    "max": "최대",
     "until": "{{date}}까지",
     "saving": "저장 중...",
     "saveChanges": "변경 사항 저장",
@@ -128,11 +128,11 @@
     "income": "소득",
     "spending": "지출",
     "saving": "저축",
-    "net": "그물"
+    "net": "순변화"
   },
   "insights": {
-    "stageWhere": "내가 있는 곳",
-    "stageChanged": "무슨 변화가 있었어",
+    "stageWhere": "나의 위치",
+    "stageChanged": "무엇이 바뀌었나?",
     "stageWhen": "언제 & 어디서",
     "stagesLabel": "인사이트 단계"
   },
@@ -176,7 +176,7 @@
     "filterTransactions": "거래 필터링",
     "clearAll": "모두 지우기",
     "done": "완료",
-    "refreshing": "상쾌한"
+    "refreshing": "새로고침 중"
   },
   "period": {
     "thisMonth": "이번 달",
@@ -232,8 +232,8 @@
     "sun": "태양",
     "total": "총계",
     "avg": "평균",
-    "min": "민",
-    "max": "맥스",
+    "min": "최소",
+    "max": "최대",
     "transactionCount_one": "{{count}}거래",
     "transactionCount_other": "{{count}}거래"
   },
@@ -344,7 +344,7 @@
     "openInTransactions": "거래에서 열기"
   },
   "heatmapSheet": {
-    "eyebrow": "당신이 소비할 때",
+    "eyebrow": "소비이력",
     "activity": "활동",
     "subtitle": "지난 12주 · 이 요일 + 시간대의 지출",
     "total": "총",
@@ -491,7 +491,7 @@
     "multiCurrencyDetail": "{{foreign}}에서 {{asOfDate}} 기준 환율을 적용하여 {{currency}}(으)로 변환된 합계입니다."
   },
   "whenYouSpend": {
-    "title": "당신이 소비할 때",
+    "title": "소비이력",
     "subtitle": "최근 12주 · 요일 및 시간대별 지출 강도.",
     "subtitleShort": "지난 12주",
     "noActivity": "지난 12주 동안 현금 활동이 없습니다.",
@@ -591,8 +591,8 @@
     "priorLabel": "이전의",
     "phraseAppeared": "나타났다 (+{{amount}})",
     "phraseDroppedToZero": "0으로 떨어짐 (이전 값{{amount}})",
-    "up": "위",
-    "down": "아래",
+    "up": "증가",
+    "down": "감소",
     "pillNew": "새로운",
     "pillNoSpend": "지출하지 않음",
     "pillEnded": "끝났다",
@@ -641,15 +641,15 @@
     "overspentCapped": "예산을 100% 이상 초과 지출함",
     "overspentBy": "{{pct}}만큼 초과 지출됨",
     "noIncome": "선택한 계좌에는 이번 기간 동안 수입이 없습니다.",
-    "spent": "소진된",
-    "saved": "저장됨",
+    "spent": "지출",
+    "saved": "저축",
     "incomeSaving": "수입 및 저축",
     "nonSpendingCashflow": "{{period}}의 비지출 현금 흐름.",
     "moneyIn": "입금",
     "incomeSources": "수입원",
     "setAside": "제쳐 두다",
     "savingDestinations": "저장 대상",
-    "sortSpent": "소진된",
+    "sortSpent": "지출",
     "sortChange": "변경",
     "sortName": "이름",
     "filterAll": "모두",
@@ -773,9 +773,9 @@
     "loadMore": "더 불러오기 ({{count}}남음)"
   },
   "tabContent": {
-    "stageWhereLabel": "내가 있는 곳",
+    "stageWhereLabel": "나의 위치",
     "stageWhereSub": "진행 속도, 예산 및 카테고리 분류",
-    "stageChangedLabel": "무슨 변화가 있었어",
+    "stageChangedLabel": "무엇이 바뀌었나?",
     "stageChangedSub": "기간별 추세",
     "stageWhenLabel": "언제 & 어디서",
     "stageWhenSub": "지출 및 지출 이벤트 시",
@@ -814,8 +814,8 @@
     "uncategorizedReview": "분류되지 않음 — 리뷰",
     "uncategorizedImprove": "분류되지 않음 — 개선을 위한 검토",
     "plusMore": "+{{count}}더",
-    "down": "아래",
-    "up": "위",
+    "down": "감소",
+    "up": "증가",
     "aboutSame": "이전 기간과 거의 동일",
     "fromPriorPeriod": "이전 기간부터",
     "intervalMtd": "이번 달",
