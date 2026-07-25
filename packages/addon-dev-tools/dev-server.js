@@ -262,11 +262,9 @@ class AddonDevServer {
 
     // Start vite build in watch mode
     const { spawn } = require("child_process");
-    const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-    this.viteWatcher = spawn(pnpmCommand, ["run", "dev"], {
+    this.viteWatcher = spawn("pnpm", ["run", "dev"], {
       cwd: this.config.addonPath,
       stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
     });
 
     this.viteWatcher.stdout.on("data", (data) => {
