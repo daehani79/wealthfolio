@@ -1,0 +1,124 @@
+{
+  "insights": {
+    "loading_dashboard": "대시보드 로드 중...",
+    "tab_overview": "개요",
+    "tab_performance": "성과",
+    "tab_income": "소득",
+    "back_to_allocation": "할당으로 돌아가기",
+    "target_allocation": "목표 배분",
+    "back_to_overview": "개요로 돌아가기",
+    "rebalance": "재조정",
+    "no_target_selected": "대상이 선택되지 않음",
+    "no_target_selected_description": "현재 비중을 의도된 비중과 비교할 수 있도록 목표 배분을 생성하세요.",
+    "set_target_allocation": "목표 배분 설정",
+    "chart_classes": "수업",
+    "chart_regions": "지역",
+    "chart_sectors": "부문",
+    "explorer": {
+      "lens_allocation": "할당",
+      "lens_accounts": "계정",
+      "lens_sectors": "부문",
+      "lens_regions": "지역",
+      "lens_risk": "위험",
+      "lens_security": "보안 유형",
+      "lens_currency": "통화",
+      "unit_categories": "카테고리",
+      "unit_accounts": "계정",
+      "unit_sectors": "부문",
+      "unit_regions": "지역",
+      "unit_levels": "수준",
+      "unit_types": "유형",
+      "unit_currencies": "통화",
+      "unit_groups": "그룹들",
+      "other_units": "기타{{unit}}",
+      "breakdown": "고장",
+      "top_units": "상위{{unit}}",
+      "show_less": "간략히 보기",
+      "show_all": "모두 표시"
+    },
+    "rails": {
+      "target_allocation": "목표 배분",
+      "details": "세부 사항",
+      "suggested_moves": "추천 동작",
+      "all_in_range": "목표 범위 내 모든 카테고리 — 리밸런싱 불필요",
+      "add": "추가",
+      "trim": "다듬다",
+      "inside_target_range": "목표 범위 내",
+      "outside_range": "{{count}}범위 외 · 가장 큰 간격{{gap}}",
+      "tolerance": "관용",
+      "current": "현재",
+      "target": "대상",
+      "no_target_yet": "아직 목표 할당이 없습니다",
+      "compare_weights": "현재 비중을 계획된 포트폴리오와 비교하세요.",
+      "set_target_allocation": "목표 배분 설정"
+    },
+    "value_strip": {
+      "portfolio_value": "포트폴리오 가치",
+      "cash_balance": "현금 잔액",
+      "invested": "투자된",
+      "book_cost": "책 비용",
+      "no_cash_balance": "현금 잔액 없음",
+      "of_portfolio": "포트폴리오의{{percent}}",
+      "available_cash": "사용 가능한 현금",
+      "holdings_count_one": "보유 자산 {{count}}개",
+      "holdings_count_other": "보유 자산 {{count}}개",
+      "accounts_count_one": "{{count}}계정",
+      "accounts_count_other": "{{count}}계정"
+    }
+  },
+  "networth": {
+    "failed_to_load": "순자산을 불러오지 못했습니다",
+    "stale_valuations_tooltip": "오래된 평가(90일 이상):",
+    "days_ago": "{{count}}개월 전",
+    "no_history_data": "이력 데이터를 사용할 수 없습니다",
+    "breakdown": "고장",
+    "no_assets_found": "자산을 찾을 수 없습니다.",
+    "add_first_asset": "첫 번째 자산을 추가하세요",
+    "update_valuations": "평가를 업데이트하세요",
+    "assets_count_one": "{{count}}자산",
+    "assets_count_other": "{{count}}자산",
+    "not_updated_over_90_days": "90일 이상 업데이트되지 않음.",
+    "chart": {
+      "net_worth": "순자산",
+      "net_worth_label": "순자산:",
+      "assets_label": "자산:",
+      "liabilities_label": "부채:"
+    },
+    "breakdown_table": {
+      "change_over": "{{period}}전환",
+      "assets": "자산",
+      "category": "카테고리",
+      "value": "가치",
+      "delta_period": "Δ{{period}}",
+      "liabilities": "부채",
+      "net_worth": "순자산"
+    },
+    "category_sheet": {
+      "over_period": "{{period}}이상",
+      "trend_period": "트렌드 ·{{period}}",
+      "items": "항목"
+    },
+    "trend": {
+      "not_enough_history": "이력 부족"
+    },
+    "momentum": {
+      "title": "모멘텀",
+      "all_time": "전체 기간",
+      "vs_prior": "이전 {{period}} 대비",
+      "beat_prior": "이전 기간 상회",
+      "behind_prior": "이전 기간 하회",
+      "now": "현재"
+    },
+    "velocity": {
+      "monthly_pace": "월간 추세",
+      "over_months_one": "1개월 기준",
+      "over_months_other": "{{count}}개월 기준",
+      "trailing_pace": "· {{multiple}}× 최근 12개월 기준 속도",
+      "drivers_of_change": "{{period}} 변동 요인",
+      "market_returns": "시장 수익",
+      "contributions": "입금/납입 기여",
+      "equity_built": "누적 자산 가치",
+      "per_month": "/월"
+    }
+  }
+}

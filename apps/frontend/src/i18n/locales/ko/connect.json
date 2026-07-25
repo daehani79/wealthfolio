@@ -1,0 +1,282 @@
+{
+  "page": {
+    "title": "동기화 및 연결",
+    "subtitle": "모든 기기를 한 곳에서 관리하세요.",
+    "subtitleWithBrokers": "증권사와 기기를 한 곳에서 관리하세요.",
+    "brokerages": "증권사",
+    "devices": "기기",
+    "recentActivity": "최근 활동",
+    "manage": "관리",
+    "timeAgo": "{{time}} 전",
+    "noBrokeragesConnected": "연결된 증권사 없음",
+    "noBrokeragesDescription": "계좌 동기화를 시작하려면 증권사를 연결하세요.",
+    "noDevicesSyncing": "아직 동기화 중인 기기 없음",
+    "noDevicesDescription": "기기 간 데이터를 동기화하려면 설정에서 기기 동기화를 설정하세요.",
+    "noActivity": "아직 활동 없음",
+    "noActivityDescription": "데이터 동기화가 시작되면 업데이트가 여기에 표시됩니다."
+  },
+  "emptyState": {
+    "optional": "선택 사항",
+    "subtitle": "데이터 프라이버시를 유지하면서 증권사를 자동으로 동기화합니다.",
+    "getStarted": "Connect 시작하기",
+    "loginToAccount": "계정에 로그인하세요",
+    "learnMore": "Connect에 대해 자세히 알아보기",
+    "features": {
+      "brokerageSync": {
+        "title": "증권사 동기화",
+        "description": "계좌와 거래 내역을 매일 자동으로 동기화합니다."
+      },
+      "deviceSync": {
+        "title": "기기 동기화",
+        "description": "종단 간(E2E) 암호화로 기기 간에 동기화합니다."
+      },
+      "householdView": {
+        "title": "가족 계정 뷰",
+        "description": "가족 구성원과 계좌를 공유합니다."
+      }
+    }
+  },
+  "flow": {
+    "yourDevice": "사용자 기기",
+    "localDatabase": "로컬 데이터베이스",
+    "dataStaysHere": "데이터는 안전하게 보관됩니다",
+    "aggregators": "데이터 수집기",
+    "brokerages": "증권사",
+    "banks": "은행",
+    "crypto": "암호화폐"
+  },
+  "account": {
+    "userAvatar": "사용자 아바타",
+    "userFallback": "사용자",
+    "active": "활성",
+    "signOut": "로그아웃",
+    "signOutTitle": "Wealthfolio Connect에서 로그아웃하시겠습니까?",
+    "signOutMessage": "동기화된 증권사 계좌에 다시 액세스하려면 로그인해야 합니다. 로컬 데이터는 영향을 받지 않습니다.",
+    "signOutConfirm": "로그아웃",
+    "signingOut": "로그아웃 중..."
+  },
+  "accounts": {
+    "title": "계좌",
+    "manage": "계좌 관리",
+    "accountFallback": "계좌",
+    "platformFallback": "플랫폼",
+    "brokerFallback": "증권사",
+    "paper": "모의투자",
+    "shared": "공유됨",
+    "sharedBy": "{{name}} 님이 공유함",
+    "syncEnabled": "동기화 활성화됨",
+    "excludedFromSync": "동기화에서 제외됨",
+    "noDataYet": "아직 데이터 없음",
+    "dataAsOf": "데이터 기준: {{date}}",
+    "emptyTitle": "아직 동기화된 계좌 없음",
+    "emptyDescription": "계좌 동기화를 시작하려면 증권사를 연결하세요."
+  },
+  "connections": {
+    "title": "증권사 연결",
+    "manage": "연결 관리",
+    "empty": "아직 증권사 연결 없음",
+    "connectBroker": "증권사 연결",
+    "unknownBroker": "알 수 없는 증권사",
+    "unknown": "알 수 없음",
+    "connected": "연결됨",
+    "disconnected": "연결 끊김",
+    "reconnect": "다시 연결",
+    "noAccountsFound": "계좌를 찾을 수 없음",
+    "allAccountsExcluded": "모든 계좌 제외됨",
+    "accountsSyncing_one": "계좌 {{count}}개 동기화 중",
+    "accountsSyncing_other": "계좌 {{count}}개 동기화 중",
+    "partialSyncing_one": "총 {{total}}개 중 {{syncing}}개 동기화 중 · {{excluded}}개 제외됨",
+    "partialSyncing_other": "총 {{total}}개 중 {{syncing}}개 동기화 중 · {{excluded}}개 제외됨"
+  },
+  "sync": {
+    "syncNow": "지금 동기화",
+    "sync": "동기화",
+    "syncAll": "모두 동기화",
+    "syncingShort": "동기화 중...",
+    "statusTitle": "동기화 상태",
+    "syncingBrokerData": "증권사 데이터 동기화 중...",
+    "startFailed": "동기화 시작 실패: {{error}}",
+    "needAttention_one": "계좌 {{count}}개 확인 필요",
+    "needAttention_other": "계좌 {{count}}개 확인 필요"
+  },
+  "status": {
+    "upToDate": "최신 상태",
+    "syncing": "동기화 중",
+    "syncingEllipsis": "동기화 중...",
+    "needsReview": "검토 필요",
+    "failed": "실패",
+    "notConnected": "연결되지 않음",
+    "lastSynced": "최근 동기화 {{time}}",
+    "neverSynced": "동기화되지 않음"
+  },
+  "runStatus": {
+    "running": "실행 중",
+    "applied": "적용됨",
+    "needsReview": "검토 필요",
+    "failed": "실패",
+    "cancelled": "취소됨"
+  },
+  "syncRuns": {
+    "title": "최근 동기화 실행",
+    "empty": "아직 동기화 실행 기록 없음.",
+    "warningsCount_one": "경고 {{count}}개",
+    "warningsCount_other": "경고 {{count}}개",
+    "fetched": "가져옴",
+    "inserted": "추가됨",
+    "updated": "업데이트됨",
+    "skipped": "건너뜀",
+    "warningsLabel": "경고:",
+    "andMore": "... 및 {{count}}개 더",
+    "reviewActivities": "활동 내역 검토",
+    "duration": "소요 시간:",
+    "inProgress": "진행 중..."
+  },
+  "syncHistory": {
+    "title": "동기화 이력",
+    "success": "성공",
+    "review": "검토",
+    "emptyTitle": "아직 동기화 실행 기록 없음",
+    "emptyDescription": "첫 번째 동기화 후 여기에 동기화 이력이 표시됩니다.",
+    "runCount_one": "{{count}}번 실행",
+    "runCount_other": "{{count}}번 실행",
+    "loadMore": "더 보기",
+    "lessThanOneSecond": "<1초",
+    "new": "신규",
+    "updated": "업데이트됨",
+    "skipped": "건너뜀",
+    "warningsCount_one": "경고 {{count}}개",
+    "warningsCount_other": "경고 {{count}}개",
+    "andMore": "+{{count}}개 더 보기"
+  },
+  "activity": {
+    "syncingData": "데이터 동기화 중...",
+    "somethingWentWrong": "문제가 발생했습니다",
+    "upToDate": "모든 항목이 최신 상태입니다",
+    "itemsNeedReview_one": "{{count}}개 항목을 검토해야 합니다",
+    "itemsNeedReview_other": "{{count}}개 항목을 검토해야 합니다",
+    "newItems": {
+      "transaction_one": "새 거래 내역 {{count}}건",
+      "transaction_other": "새 거래 내역 {{count}}건",
+      "position_one": "새 보유 자산 {{count}}건",
+      "position_other": "새 보유 자산 {{count}}건"
+    },
+    "updatedItems": {
+      "transaction_one": "업데이트된 거래 내역 {{count}}건",
+      "transaction_other": "업데이트된 거래 내역 {{count}}건",
+      "position_one": "업데이트된 보유 자산 {{count}}건",
+      "position_other": "업데이트된 보유 자산 {{count}}건"
+    },
+    "removedItems": {
+      "transaction_one": "삭제된 거래 내역 {{count}}건",
+      "transaction_other": "삭제된 거래 내역 {{count}}건",
+      "position_one": "삭제된 보유 자산 {{count}}건",
+      "position_other": "삭제된 보유 자산 {{count}}건"
+    }
+  },
+  "attention": {
+    "title": "증권사 동기화 확인 필요",
+    "description_one": "계좌 {{count}}개에 대해 재시도 또는 증권사 확인이 필요합니다.",
+    "description_other": "계좌 {{count}}개에 대해 재시도 또는 증권사 확인이 필요합니다."
+  },
+  "setup": {
+    "newAccountsTitle": "새 계좌 설정 필요",
+    "newAccountsDescription_one": "동기화를 시작하기 전에 계좌 {{count}}개에 대한 간단한 설정이 필요합니다.",
+    "newAccountsDescription_other": "동기화를 시작하기 전에 계좌 {{count}}개에 대한 간단한 설정이 필요합니다.",
+    "reviewAccounts": "계좌 검토"
+  },
+  "devices": {
+    "thisDevice": "현재 기기",
+    "activeNow": "현재 활성 상태",
+    "lastSeen": "최근 접속: {{time}}",
+    "online": "온라인",
+    "never": "없음"
+  },
+  "deviceStatus": {
+    "syncError": "동기화 오류",
+    "syncPaused": "동기화 일시 중지됨",
+    "upToDate": "최신 상태",
+    "syncing": "동기화 중"
+  },
+  "serviceUnavailable": {
+    "title": "서비스를 일시적으로 사용할 수 없습니다",
+    "description": "Wealthfolio Connect에 연결하는 데 문제가 발생했습니다. 보통 일시적인 문제이며 곧 해결됩니다.",
+    "retrying": "재시도 중...",
+    "tryAgain": "다시 시도"
+  },
+  "upgrade": {
+    "title": "증권사 계좌 동기화를 위해 업그레이드하세요",
+    "description": "자동 포트폴리오 동기화를 위해 증권사 계좌를 연결하세요.",
+    "button": "업그레이드"
+  },
+  "privacy": {
+    "footnote": "Wealthfolio Connect는 사용자의 증권사 로그인 정보나 금융 데이터를 저장하지 않습니다. 모든 정보는 데이터 수집기를 통해 로컬 데이터베이스로 안전하게 동기화됩니다. 기기 간 동기화는 종단 간(E2E) 암호화를 사용합니다. <privacyLink>자세히 알아보기</privacyLink>"
+  },
+  "providers": {
+    "continueWithGoogle": "Google로 계속하기",
+    "continueWithApple": "Apple로 계속하기",
+    "continueWithEmail": "이메일로 계속하기",
+    "lastUsed": "마지막 사용"
+  },
+  "subscription": {
+    "comingSoon": "출시 예정",
+    "getStarted": "시작하기",
+    "perMonthShort": "월",
+    "perYearShort": "년",
+    "savings": "월간 구독 대비 {{percent}}% 절약",
+    "choosePlan": "플랜 선택",
+    "choosePlanDescription": "증권사 동기화 및 클라우드 기능을 이용하려면 구독하세요.",
+    "monthly": "매월",
+    "yearly": "매년",
+    "monthlyBilling": "월간 결제",
+    "yearlyBilling": "연간 결제",
+    "alreadySubscribed": "이미 구독 중이신가요?",
+    "connectionIssueTitle": "연결 문제",
+    "connectionIssueDescription": "계정에 연결하는 데 문제가 발생했습니다. 세션이 만료된 경우 발생할 수 있습니다.",
+    "unableToLoadTitle": "플랜을 불러올 수 없음",
+    "unableToLoadDescription": "지금은 구독 플랜을 불러올 수 없습니다. 일반적으로 일시적인 문제입니다.",
+    "contactSupport": "고객지원팀 문의",
+    "emailCopied": "이메일이 클립보드에 복사되었습니다",
+    "reconnecting": "다시 연결 중...",
+    "reconnect": "다시 연결",
+    "refreshPage": "페이지 새로고침"
+  },
+  "authCallback": {
+    "processing": "인증 처리 중...",
+    "completing": "로그인 완료 중..."
+  },
+  "authErrors": {
+    "noSessionReturned": "로그인을 완료한 후 세션이 반환되지 않았습니다.",
+    "completeSignInFailed": "로그인 완료에 실패했습니다",
+    "signInFailed": "로그인 실패",
+    "signUpFailed": "가입 실패",
+    "confirmEmail": "계정 확인을 위해 이메일을 확인하세요.",
+    "oauthFailed": "OAuth 로그인 실패",
+    "magicLinkFailed": "매직 링크 전송에 실패했습니다",
+    "invalidVerificationCode": "잘못된 인증 코드입니다",
+    "signOutFailed": "로그아웃 실패",
+    "fetchUserInfoFailed": "사용자 정보를 가져오는 데 실패했습니다"
+  },
+  "newAccounts": {
+    "title": "새 계좌를 찾았습니다",
+    "description": "각 계좌를 추적할 방법을 선택하세요. 나중에 변경할 수 있습니다.",
+    "trackingInfo": "<strong>거래 내역</strong> 모드는 완벽한 성과 분석을 위해 모든 거래를 추적합니다. <strong>보유 자산</strong> 모드는 제한된 측정항목과 함께 스냅샷만 가져옵니다. <docsLink>자세히 알아보기</docsLink>",
+    "accountName": "계좌 이름",
+    "group": "그룹 (선택 사항)",
+    "groupPlaceholder": "예: 퇴직연금",
+    "trackingMode": "추적 모드",
+    "transactions": "거래 내역",
+    "transactionsDescription": "전체 성과 분석",
+    "holdings": "보유 자산",
+    "holdingsDescription": "스냅샷 전용",
+    "holdingsWarning": "거래 내역이 없으면 성과 지표가 제한됩니다.",
+    "notNow": "나중에",
+    "saving": "저장 중...",
+    "saveAndSync": "저장 및 동기화",
+    "configured": "계좌가 구성되었습니다",
+    "configuredDescription": "선택한 설정으로 동기화를 시작합니다...",
+    "saveFailed": "계좌 저장에 실패했습니다"
+  },
+  "errors": {
+    "unknown": "알 수 없는 오류"
+  }
+}
